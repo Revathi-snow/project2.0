@@ -1,7 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
-const db = require("./dblocal");
+const db = require("./db");
 
 // Check existing database tables
 router.get("/tables", async (req, res) => {
