@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -28,21 +27,26 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_id: userId.trim(),
-            email: email.trim(),
-            password,
-            role,
-          }),
-        }
-      );
+      const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
+      if (!API_URL) {
+        throw new Error(
+          "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+        );
+      }
+
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId.trim(),
+          email: email.trim(),
+          password,
+          role,
+        }),
+      });
 
       const data = await response.json();
 

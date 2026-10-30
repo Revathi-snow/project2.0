@@ -1,0 +1,6 @@
+DB_USER=postgres
+DB_HOST=localhost
+DB_NAME=attendease
+DB_PASSWORD=Reva0407
+DB_PORT=1904
+PORT=5000

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API = API_URL ? `${API_URL}/api` : "";
 
 const emptyForm = {
   first_name: "",
@@ -32,10 +33,7 @@ export default function StudentProfile() {
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [form, setForm] = useState(emptyForm);
 
-  // Admin starts in add mode. Students always edit their own profile.
-  const [mode, setMode] = useState(
-    isAdmin ? "add" : "edit"
-  );
+  const [mode, setMode] = useState(isAdmin ? "add" : "edit");
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,6 +55,12 @@ export default function StudentProfile() {
   // Load existing students for the admin dropdown.
   const loadStudents = useCallback(async () => {
     try {
+      if (!API) {
+        throw new Error(
+          "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+        );
+      }
+
       const response = await fetch(`${API}/students`);
       const data = await response.json();
 
@@ -64,8 +68,10 @@ export default function StudentProfile() {
         throw new Error(data.message || "Unable to load students.");
       }
 
-      setStudents(Array.isArray(data) ? data : []);
-      return Array.isArray(data) ? data : [];
+      const studentList = Array.isArray(data) ? data : [];
+      setStudents(studentList);
+
+      return studentList;
     } catch (error) {
       showMessage(error.message || "Unable to load students.", "error");
       return [];
@@ -105,6 +111,12 @@ export default function StudentProfile() {
       setMessage("");
 
       try {
+        if (!API) {
+          throw new Error(
+            "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+          );
+        }
+
         const response = await fetch(
           `${API}/student/profile/${encodeURIComponent(id)}`,
           { signal: controller.signal }
@@ -126,12 +138,14 @@ export default function StudentProfile() {
           enrollment_date: data.enrollment_date
             ? String(data.enrollment_date).slice(0, 10)
             : "",
-          duration:
-            data.duration == null ? "" : String(data.duration),
+          duration: data.duration == null ? "" : String(data.duration),
         });
       } catch (error) {
         if (error.name !== "AbortError") {
-          showMessage(error.message || "Unable to load profile.", "error");
+          showMessage(
+            error.message || "Unable to load profile.",
+            "error"
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -169,8 +183,14 @@ export default function StudentProfile() {
     setMessage("");
   }
 
-  // Add a new student to the existing PostgreSQL database.
+  // Add a new student to the existing database.
   async function addStudent() {
+    if (!API) {
+      throw new Error(
+        "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+      );
+    }
+
     const response = await fetch(`${API}/students/register`, {
       method: "POST",
       headers: {
@@ -196,7 +216,7 @@ export default function StudentProfile() {
 
     const newUserId = data.user?.user_id;
 
-    if (!newUserId) {
+    if (newUserId == null) {
       throw new Error(
         "Student was registered, but the response did not contain a user ID."
       );
@@ -218,6 +238,12 @@ export default function StudentProfile() {
 
   // Update an existing student's profile.
   async function updateStudent() {
+    if (!API) {
+      throw new Error(
+        "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+      );
+    }
+
     const id = isAdmin
       ? selectedStudentId
       : String(userId ?? "");
@@ -251,11 +277,11 @@ export default function StudentProfile() {
       throw new Error(data.message || "Unable to update profile.");
     }
 
-    await loadStudents();
+    if (isAdmin) {
+      await loadStudents();
+    }
 
-    showMessage(
-      data.message || "Student profile updated successfully."
-    );
+    showMessage(data.message || "Student profile updated successfully.");
   }
 
   async function handleSubmit(event) {
@@ -412,7 +438,8 @@ export default function StudentProfile() {
                     key={student.user_id}
                     value={String(student.user_id)}
                   >
-                    {student.name} — {student.email}
+                    {student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || "Unnamed Student"}{" "}
+                    — {student.email}
                   </option>
                 ))}
               </select>
@@ -511,7 +538,7 @@ export default function StudentProfile() {
                   />
 
                   <p className="mt-1 text-xs text-slate-500">
-                    Your backend hashes this password before storing it.
+                    Ensure your backend hashes this password before storing it.
                   </p>
                 </div>
               )}

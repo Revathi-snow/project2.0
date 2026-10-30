@@ -1,8 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+
+
 export default function EmployeeDetails() {
+  const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -12,22 +14,48 @@ export default function EmployeeDetails() {
     setError("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/admin/employees"
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!API_URL) {
         throw new Error(
-          data.message || "Could not load employee details."
+          "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
         );
       }
 
-      setEmployees(
-        Array.isArray(data) ? data : data.employees || []
+      const response = await fetch(
+        `${API_URL}/api/admin/employees`
       );
+
+      const text = await response.text();
+      let data;
+
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(
+          `The backend returned an invalid response (HTTP ${response.status}). Check the API URL and backend route.`
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            data.error ||
+            `Could not load employee details (HTTP ${response.status}).`
+        );
+      }
+
+      const records = Array.isArray(data)
+        ? data
+        : data.employees;
+
+      if (!Array.isArray(records)) {
+        throw new Error(
+          "The backend response does not contain an employee list."
+        );
+      }
+
+      setEmployees(records);
     } catch (err) {
+      setEmployees([]);
       setError(
         err.message || "Unable to connect to the backend."
       );
@@ -43,8 +71,6 @@ export default function EmployeeDetails() {
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl">
-
-        {/* Back navigation */}
         <Link
           to="/admin"
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
@@ -52,7 +78,6 @@ export default function EmployeeDetails() {
           ← Back to Admin Dashboard
         </Link>
 
-        {/* Page heading */}
         <div className="mb-7">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-blue-600">
             Employee Management
@@ -67,13 +92,10 @@ export default function EmployeeDetails() {
           </p>
         </div>
 
-        {/* Main card */}
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
           <div className="h-2 bg-blue-600" />
 
           <div className="p-6 sm:p-8">
-
-            {/* Card heading */}
             <div className="mb-7 flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-blue-100 text-2xl text-blue-700">
@@ -105,7 +127,6 @@ export default function EmployeeDetails() {
               </button>
             </div>
 
-            {/* Error message */}
             {error && (
               <div
                 role="alert"
@@ -123,7 +144,6 @@ export default function EmployeeDetails() {
               </div>
             )}
 
-            {/* Loading state */}
             {loading ? (
               <div className="rounded-xl bg-slate-50 p-10 text-center">
                 <p className="font-medium text-slate-600">
@@ -131,7 +151,6 @@ export default function EmployeeDetails() {
                 </p>
               </div>
             ) : !error && employees.length === 0 ? (
-              /* Empty state */
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
                 <div className="mb-3 text-3xl text-blue-600">
                   ♙
@@ -146,7 +165,6 @@ export default function EmployeeDetails() {
                 </p>
               </div>
             ) : !error ? (
-              /* Employee table */
               <div className="overflow-hidden rounded-xl border border-slate-200">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
@@ -155,15 +173,12 @@ export default function EmployeeDetails() {
                         <th className="whitespace-nowrap px-5 py-4">
                           Employee
                         </th>
-
                         <th className="whitespace-nowrap px-5 py-4">
                           Contact Number
                         </th>
-
                         <th className="whitespace-nowrap px-5 py-4">
                           Designation
                         </th>
-
                         <th className="whitespace-nowrap px-5 py-4">
                           Date of Joining
                         </th>
@@ -171,9 +186,13 @@ export default function EmployeeDetails() {
                     </thead>
 
                     <tbody className="divide-y divide-slate-200">
-                      {employees.map((employee) => (
+                      {employees.map((employee, index) => (
                         <tr
-                          key={employee.admin_id}
+                          key={
+                            employee.admin_id ??
+                            employee.user_id ??
+                            index
+                          }
                           className="transition hover:bg-slate-50"
                         >
                           <td className="whitespace-nowrap px-5 py-4">
@@ -191,11 +210,11 @@ export default function EmployeeDetails() {
                                     employee.last_name,
                                   ]
                                     .filter(Boolean)
-                                    .join(" ")}
+                                    .join(" ") || "—"}
                                 </p>
 
                                 <p className="mt-1 text-xs text-slate-400">
-                                  Employee ID: {employee.admin_id}
+                                  Employee ID: {employee.admin_id ?? "—"}
                                 </p>
                               </div>
                             </div>
@@ -212,7 +231,9 @@ export default function EmployeeDetails() {
                           </td>
 
                           <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                            {employee.date_of_join || "—"}
+                            {employee.date_of_join
+                              ? String(employee.date_of_join).slice(0, 10)
+                              : "—"}
                           </td>
                         </tr>
                       ))}
@@ -222,7 +243,6 @@ export default function EmployeeDetails() {
               </div>
             ) : null}
 
-            {/* Footer note */}
             <div className="mt-6 border-t border-slate-200 pt-5">
               <p className="text-sm text-slate-500">
                 Employee records are retrieved from your existing database.

@@ -1,8 +1,8 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API = `${API_URL}/api`;
 
 function formatDate(value) {
   if (!value) return "-";
@@ -58,37 +58,38 @@ export default function Reports() {
     setRecords([]);
 
     try {
+      if (!API_URL) {
+        throw new Error(
+          "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+        );
+      }
+
       const params = new URLSearchParams({
         startDate,
         endDate,
       });
 
-     const response = await fetch(
-  `${API}/reports/student-attendance?${params.toString()}`
-);
+      const response = await fetch(
+        `${API}/reports/student-attendance?${params.toString()}`
+      );
 
-const text = await response.text();
+      const text = await response.text();
+      let data;
 
-console.log("Response status:", response.status);
-console.log("Response content type:", response.headers.get("content-type"));
-console.log("Response body:", text);
-
-if (!response.ok) {
-  throw new Error(`Server returned HTTP ${response.status}. Check the backend route.`);
-}
-
-let data;
-
-try {
-  data = JSON.parse(text);
-} catch {
-  throw new Error(
-    "The report API returned HTML instead of JSON. Check the backend route and URL."
-  );
-}
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(
+          `The report API returned an invalid response (HTTP ${response.status}). Check the backend route and URL.`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || "Unable to generate the report.");
+        throw new Error(
+          data.message ||
+            data.error ||
+            `Unable to generate the report (HTTP ${response.status}).`
+        );
       }
 
       const reportRecords = Array.isArray(data)

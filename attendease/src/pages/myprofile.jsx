@@ -1,8 +1,9 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function MyProfile() {
+  const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,7 +30,7 @@ export default function MyProfile() {
         }
 
         const response = await fetch(
-          `http://localhost:5000/api/student/profile/${encodeURIComponent(
+          `${API_URL}/api/student/profile/${encodeURIComponent(
             userId
           )}`
         );

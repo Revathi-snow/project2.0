@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -11,6 +10,8 @@ const initialForm = {
 };
 
 export default function EmployeeProfile() {
+  const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
   const [userId, setUserId] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function EmployeeProfile() {
         setUserId(id);
 
         const response = await fetch(
-          `http://localhost:5000/api/admin/profile/${encodeURIComponent(id)}`
+          `${API_URL}/api/admin/profile/${encodeURIComponent(id)}`
         );
 
         const data = await response.json();
@@ -93,7 +94,7 @@ export default function EmployeeProfile() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/profile/${encodeURIComponent(userId)}`,
+        `${API_URL}/api/admin/profile/${encodeURIComponent(userId)}`,
         {
           method: "PUT",
           headers: {

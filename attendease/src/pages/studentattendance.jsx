@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-
 
 const COLLEGE_LOCATION = {
   latitude: 12.754383872187988,
@@ -9,7 +7,7 @@ const COLLEGE_LOCATION = {
   allowedRadius: 150,
 };
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 function getDistanceInMetres(lat1, lon1, lat2, lon2) {
   const toRadians = (degrees) => (degrees * Math.PI) / 180;
@@ -38,45 +36,48 @@ function getLocalDate() {
 
 export default function StudentAttendance() {
   const [holiday, setHoliday] = useState(null);
-const [holidayChecked, setHolidayChecked] = useState(false);
-const [holidayError, setHolidayError] = useState(false);
+  const [holidayChecked, setHolidayChecked] = useState(false);
+  const [holidayError, setHolidayError] = useState(false);
 
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  async function checkPublicHoliday() {
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/public-holiday/today`
-      );
+    async function checkPublicHoliday() {
+      try {
+        if (!API_BASE) {
+          throw new Error("VITE_API_URL is missing.");
+        }
 
-      if (!response.ok) {
-        throw new Error("Holiday check failed");
-      }
+        const response = await fetch(`${API_BASE}/api/public-holiday/today`);
 
-      const data = await response.json();
+        if (!response.ok) {
+          throw new Error("Holiday check failed");
+        }
 
-      if (!cancelled) {
-        setHoliday(data.isHoliday ? data.holiday : null);
-        setHolidayError(false);
-      }
-    } catch {
-      if (!cancelled) {
-        setHolidayError(true);
-      }
-    } finally {
-      if (!cancelled) {
-        setHolidayChecked(true);
+        const data = await response.json();
+
+        if (!cancelled) {
+          setHoliday(data.isHoliday ? data.holiday : null);
+          setHolidayError(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setHolidayError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setHolidayChecked(true);
+        }
       }
     }
-  }
 
-  checkPublicHoliday();
+    checkPublicHoliday();
 
-  return () => {
-    cancelled = true;
-  };
-}, []);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [distance, setDistance] = useState(null);
@@ -208,11 +209,19 @@ useEffect(() => {
       return;
     }
 
+    if (!API_BASE) {
+      setStatus("error");
+      setMessage(
+        "VITE_API_URL is missing. Check your frontend .env file and restart Vite."
+      );
+      return;
+    }
+
     setSaving(true);
     setMessage("");
 
     try {
-      // Match this URL to your actual backend attendance-marking route.
+      // Keep this URL aligned with your existing backend attendance route.
       const response = await fetch(
         `${API_BASE}/api/student/attendance/mark`,
         {
@@ -233,19 +242,20 @@ useEffect(() => {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-  if (response.status === 409) {
-    setStatus("marked");
-    setMarkedDate(today);
-    setMessage(
-      data.message || "You have already marked attendance today."
-    );
-    return;
-  }
+        if (response.status === 409) {
+          setStatus("marked");
+          setMarkedDate(today);
+          setMessage(
+            data.message || "You have already marked attendance today."
+          );
+          return;
+        }
 
-  throw new Error(
-    data.message || "Attendance could not be saved."
-  );
-}
+        throw new Error(
+          data.message || "Attendance could not be saved."
+        );
+      }
+
       setMarkedDate(today);
       setStatus("marked");
       setMessage(data.message || "Attendance marked successfully!");
@@ -260,14 +270,14 @@ useEffect(() => {
     }
   };
 
- const canMark =
-  holidayChecked &&
-  !holidayError &&
-  !holiday &&
-  status === "verified" &&
-  !isSunday &&
-  !saving &&
-  markedDate !== today;
+  const canMark =
+    holidayChecked &&
+    !holidayError &&
+    !holiday &&
+    status === "verified" &&
+    !isSunday &&
+    !saving &&
+    markedDate !== today;
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-800 sm:px-6">
@@ -339,48 +349,50 @@ useEffect(() => {
                 eligible day.
               </div>
             )}
-{!holidayChecked && (
-  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-    Checking public holidays...
-  </div>
-)}
 
-{holidayError && (
-  <div
-    role="alert"
-    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-  >
-    Unable to check public holidays. Please refresh the page before
-    marking attendance.
-  </div>
-)}
+            {!holidayChecked && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Checking public holidays...
+              </div>
+            )}
 
-{holidayChecked && holiday && (
-  <div
-    role="status"
-    className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900"
-  >
-    <h3 className="font-bold">
-      🎉 Public Holiday: {holiday.holiday_name}
-    </h3>
+            {holidayError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              >
+                Unable to check public holidays. Please refresh the page before
+                marking attendance.
+              </div>
+            )}
 
-    {holiday.description && (
-      <p className="mt-1 text-sm">{holiday.description}</p>
-    )}
+            {holidayChecked && holiday && (
+              <div
+                role="status"
+                className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900"
+              >
+                <h3 className="font-bold">
+                  🎉 Public Holiday: {holiday.holiday_name}
+                </h3>
 
-    <p className="mt-2 text-sm font-medium">
-      Attendance marking is disabled for today.
-    </p>
-  </div>
-)}
+                {holiday.description && (
+                  <p className="mt-1 text-sm">{holiday.description}</p>
+                )}
+
+                <p className="mt-2 text-sm font-medium">
+                  Attendance marking is disabled for today.
+                </p>
+              </div>
+            )}
+
             <div className="rounded-xl border border-slate-200 p-5">
               <div className="flex items-start gap-3">
                 <div className="text-xl">
                   {status === "verified" || status === "marked"
                     ? "✓"
                     : status === "outside" || status === "error"
-                    ? "!"
-                    : "◎"}
+                      ? "!"
+                      : "◎"}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -414,8 +426,8 @@ useEffect(() => {
                         status === "verified" || status === "marked"
                           ? "text-green-700"
                           : status === "outside" || status === "blocked"
-                          ? "text-amber-700"
-                          : "text-slate-600"
+                            ? "text-amber-700"
+                            : "text-slate-600"
                       }`}
                     >
                       {message}
@@ -428,13 +440,13 @@ useEffect(() => {
                 type="button"
                 onClick={checkLocation}
                 disabled={
-  status === "checking" ||
-  saving ||
-  isSunday ||
-  !holidayChecked ||
-  holidayError ||
-  !!holiday
-}
+                  status === "checking" ||
+                  saving ||
+                  isSunday ||
+                  !holidayChecked ||
+                  holidayError ||
+                  !!holiday
+                }
                 className="mt-5 w-full rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 font-semibold text-blue-800 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {status === "checking"
@@ -452,8 +464,8 @@ useEffect(() => {
               {saving
                 ? "Submitting Attendance..."
                 : status === "marked" || markedDate === today
-                ? "✓ Attendance Submitted"
-                : "✓ Mark My Attendance"}
+                  ? "✓ Attendance Submitted"
+                  : "✓ Mark My Attendance"}
             </button>
 
             {status === "error" && (

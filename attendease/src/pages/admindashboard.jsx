@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
+  const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -39,7 +40,7 @@ export default function AdminDashboard() {
         setError("");
 
         const response = await fetch(
-          "http://localhost:5000/api/admin/dashboard",
+          `${API_URL}/api/admin/dashboard`,
           { signal: controller.signal }
         );
 
@@ -63,9 +64,7 @@ export default function AdminDashboard() {
         );
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError(
-            err.message || "Cannot connect to the backend."
-          );
+          setError(err.message || "Cannot connect to the backend.");
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -77,7 +76,7 @@ export default function AdminDashboard() {
     fetchDashboard();
 
     return () => controller.abort();
-  }, []);
+  }, [API_URL]);
 
   async function fetchEmployees() {
     try {
@@ -85,7 +84,7 @@ export default function AdminDashboard() {
       setEmployeeError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/admin/employees"
+        `${API_URL}/api/admin/employees`
       );
 
       const result = await response.json();
@@ -130,7 +129,7 @@ export default function AdminDashboard() {
       setEmployeeError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/admin/employees",
+        `${API_URL}/api/admin/employees`,
         {
           method: "POST",
           headers: {
@@ -212,17 +211,14 @@ export default function AdminDashboard() {
   ];
 
   const menuItems = [
-  { label: "▦  Dashboard", to: "/admin", active: true },
-  { label: "✓  Mark Attendance", to: "/attendance" },
-
-  { label: "♙  Student Profile Update", to: "/student-profile" },
-  { label: "▤  Student Details", to: "/student-details" },
-
-  { label: "♙  Employee Profile Update", to: "/employees" },
-  { label: "▤  Employee Details", to: "/employee-details" },
-
-  { label: "▤  Reports", to: "/reports" },
-];
+    { label: "▦  Dashboard", to: "/admin", active: true },
+    { label: "✓  Mark Attendance", to: "/attendance" },
+    { label: "♙  Student Profile Update", to: "/student-profile" },
+    { label: "▤  Student Details", to: "/student-details" },
+    { label: "♙  Employee Profile Update", to: "/employees" },
+    { label: "▤  Employee Details", to: "/employee-details" },
+    { label: "▤  Reports", to: "/reports" },
+  ];
 
   function formatDate(date) {
     if (!date) return "—";
@@ -332,26 +328,27 @@ export default function AdminDashboard() {
         {/* Recent Attendance */}
         <section className="mb-[30px] rounded-[14px] border border-[#e2e8f0] bg-white p-[24px] shadow-sm max-sm:p-3">
           <div className="mb-[23px] flex flex-wrap items-center justify-between gap-3">
-  <h2 className="text-[19px] font-bold text-[#111827]">
-    Recent Attendance
-  </h2>
+            <h2 className="text-[19px] font-bold text-[#111827]">
+              Recent Attendance
+            </h2>
 
-  <div className="flex flex-wrap gap-3">
-    <Link
-      to="/student-profile"
-      className="inline-block rounded-[8px] bg-[#16a34a] px-[16px] py-[12px] text-[13px] text-white no-underline transition hover:bg-[#15803d]"
-    >
-      + Add New Student
-    </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to="/student-profile"
+                className="inline-block rounded-[8px] bg-[#16a34a] px-[16px] py-[12px] text-[13px] text-white no-underline transition hover:bg-[#15803d]"
+              >
+                + Add New Student
+              </Link>
 
-    <Link
-      to="/attendance"
-      className="inline-block rounded-[8px] bg-[#2875c7] px-[16px] py-[12px] text-[13px] text-white no-underline transition hover:bg-[#1d5fa8]"
-    >
-      + Mark Attendance
-    </Link>
-  </div>
-</div>
+              <Link
+                to="/attendance"
+                className="inline-block rounded-[8px] bg-[#2875c7] px-[16px] py-[12px] text-[13px] text-white no-underline transition hover:bg-[#1d5fa8]"
+              >
+                + Mark Attendance
+              </Link>
+            </div>
+          </div>
+
           {error && (
             <p className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
               {error}
@@ -557,28 +554,19 @@ export default function AdminDashboard() {
               <tbody>
                 {employeeLoading ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-3 py-8 text-center text-sm text-slate-500"
-                    >
+                    <td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
                       Loading employee details...
                     </td>
                   </tr>
                 ) : employeeError ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-3 py-8 text-center text-sm text-slate-500"
-                    >
+                    <td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
                       Employee details could not be loaded.
                     </td>
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-3 py-8 text-center text-sm text-slate-500"
-                    >
+                    <td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
                       No employee records found.
                     </td>
                   </tr>

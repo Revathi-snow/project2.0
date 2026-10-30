@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -25,6 +27,12 @@ export default function StudentDashboard() {
       return;
     }
 
+    if (!API_URL) {
+      setError("VITE_API_URL is missing. Check your frontend .env file and restart Vite.");
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadDashboard() {
@@ -33,7 +41,7 @@ export default function StudentDashboard() {
         setError("");
 
         const response = await fetch(
-          `http://localhost:5000/api/student/attendance/${studentId}`,
+          `${API_URL}/api/student/attendance/${encodeURIComponent(studentId)}`,
           { signal: controller.signal }
         );
 
@@ -100,18 +108,16 @@ export default function StudentDashboard() {
   ];
 
   const menuItems = [
-  { label: "▦  Dashboard", to: "/student" },
-  { label: "✓  Mark Attendance", to: "/student-attendance" },
-  { label: "♙  Student Profile Update", to: "/student-profile" },
-  { label: "♙  My Profile", to: "/my-profile" },
-];
+    { label: "▦  Dashboard", to: "/student", active: true },
+    { label: "✓  Mark Attendance", to: "/student-attendance" },
+    { label: "♙  Student Profile Update", to: "/student-profile" },
+    { label: "♙  My Profile", to: "/my-profile" },
+  ];
 
   return (
     <div className="flex min-h-screen w-full bg-[#f1f5f9] font-[Arial,sans-serif] text-[#1e293b]">
-
       {/* Sidebar */}
       <aside className="flex min-h-screen w-[235px] shrink-0 flex-col bg-[#0f172a] px-[15px] py-[25px] text-white max-md:w-[190px] max-sm:w-full max-sm:min-h-0">
-
         <div className="px-[10px] pb-[30px] pt-[5px] text-[19px] font-bold">
           🎓 Attend<span className="text-[#60a5fa]">Ease</span>
         </div>
@@ -121,20 +127,20 @@ export default function StudentDashboard() {
         </div>
 
         <nav className="flex flex-col gap-[7px]">
-  {menuItems.map((item) => (
-    <Link
-      key={item.label}
-      to={item.to}
-      className={`block rounded-[8px] px-3 py-[13px] text-[14px] no-underline transition-colors ${
-        item.active
-          ? "bg-[#2563eb] text-white"
-          : "text-[#cbd5e1] hover:bg-[#2563eb] hover:text-white"
-      }`}
-    >
-      {item.label}
-    </Link>
-  ))}
-</nav>
+          {menuItems.map((item) => (
+            <Link
+              key={item.label}
+              to={item.to}
+              className={`block rounded-[8px] px-3 py-[13px] text-[14px] no-underline transition-colors ${
+                item.active
+                  ? "bg-[#2563eb] text-white"
+                  : "text-[#cbd5e1] hover:bg-[#2563eb] hover:text-white"
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
         <div className="mt-auto pt-6 max-sm:mt-0">
           <button
@@ -149,7 +155,6 @@ export default function StudentDashboard() {
 
       {/* Main Content */}
       <main className="min-w-0 flex-1 p-7 max-lg:p-5 max-sm:p-3">
-
         {/* Header */}
         <header className="mb-[30px] flex items-center justify-between gap-5 max-sm:flex-wrap">
           <div>
@@ -252,13 +257,19 @@ export default function StudentDashboard() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={3} className="px-3 py-10 text-center text-[13px] text-[#64748b]">
+                      <td
+                        colSpan={3}
+                        className="px-3 py-10 text-center text-[13px] text-[#64748b]"
+                      >
                         Loading attendance records...
                       </td>
                     </tr>
                   ) : records.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-3 py-10 text-center text-[13px] text-[#64748b]">
+                      <td
+                        colSpan={3}
+                        className="px-3 py-10 text-center text-[13px] text-[#64748b]"
+                      >
                         No attendance records to display.
                       </td>
                     </tr>
@@ -324,7 +335,6 @@ export default function StudentDashboard() {
             history will update when records are available from the backend.
           </p>
         </section>
-
       </main>
     </div>
   );

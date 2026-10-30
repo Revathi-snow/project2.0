@@ -79,7 +79,7 @@ app.post("/api/auth/login", async (req, res) => {
 
     const result = await db.query(
       `SELECT user_id, name, email, password_hash, role
-       FROM users
+       FROM public.users
        WHERE LOWER(email) = LOWER($1)
          AND role = $2`,
       [email.trim(), role.toLowerCase()]
@@ -136,7 +136,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
   try {
     const studentResult = await db.query(`
       SELECT COUNT(*) AS total_students
-      FROM users
+      FROM public.users
       WHERE role = 'student'
     `);
 
@@ -152,7 +152,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
           WHERE status IN ('present', 'late')
         ) AS attended_today,
         COUNT(*) AS total_marked_today
-      FROM attendance
+      FROM public.attendance
       WHERE attendance_date = CURRENT_DATE
     `);
 
@@ -162,7 +162,7 @@ app.get("/api/admin/dashboard", async (req, res) => {
         u.name AS student_name,
         a.attendance_date AS date,
         a.status
-      FROM attendance a
+      FROM public.attendance a
       JOIN users u ON u.user_id = a.student_id
       WHERE u.role = 'student'
       ORDER BY
@@ -213,7 +213,7 @@ app.get("/api/students", async (req, res) => {
         s.first_name,
         s.last_name,
         s.course
-      FROM users u
+      FROM public.users u
       JOIN student_details s ON s.user_id = u.user_id
       WHERE u.role = 'student'
       ORDER BY s.first_name ASC
@@ -244,7 +244,7 @@ app.get("/api/student/attendance/:studentId", async (req, res) => {
 
     const studentResult = await db.query(
       `SELECT user_id, name
-       FROM users
+       FROM public.users
        WHERE user_id = $1 AND role = 'student'`,
       [studentId]
     );
@@ -267,7 +267,7 @@ app.get("/api/student/attendance/:studentId", async (req, res) => {
          COUNT(*) FILTER (
            WHERE LOWER(status) IN ('present', 'late')
          ) AS attended_classes
-       FROM attendance
+       FROM public.attendance
        WHERE student_id = $1`,
       [studentId]
     );
@@ -282,7 +282,7 @@ app.get("/api/student/attendance/:studentId", async (req, res) => {
          attendance_date AS date,
          check_in_time,
          status
-       FROM attendance
+       FROM public.attendance
        WHERE student_id = $1
        ORDER BY
          attendance_date DESC,
@@ -343,7 +343,7 @@ app.get("/api/student/profile/:userId", async (req, res) => {
          s.course,
          s.enrollment_date,
          s.duration
-       FROM users u
+       FROM public.users u
        LEFT JOIN student_details s ON s.user_id = u.user_id
        WHERE u.user_id = $1
          AND u.role = 'student'`,
@@ -417,7 +417,7 @@ app.put("/api/student/profile/:userId", async (req, res) => {
 
     const existingUser = await client.query(
       `SELECT user_id
-       FROM users
+       FROM public.users
        WHERE user_id = $1 AND role = 'student'`,
       [userId]
     );
@@ -434,7 +434,7 @@ app.put("/api/student/profile/:userId", async (req, res) => {
 
     const emailCheck = await client.query(
       `SELECT user_id
-       FROM users
+       FROM public.users
        WHERE LOWER(email) = $1 AND user_id <> $2`,
       [normalizedEmail, userId]
     );
@@ -448,7 +448,7 @@ app.put("/api/student/profile/:userId", async (req, res) => {
     }
 
     await client.query(
-      `UPDATE users
+      `UPDATE public.users
        SET name = $1, email = $2
        WHERE user_id = $3`,
       [
@@ -459,7 +459,7 @@ app.put("/api/student/profile/:userId", async (req, res) => {
     );
 
     const profileResult = await client.query(
-      `UPDATE student_details
+      `UPDATE public.student_details
        SET first_name = $1,
            last_name = $2,
            contact = $3,
@@ -602,7 +602,7 @@ app.post("/api/students/register", async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     const existingUser = await client.query(
-      "SELECT user_id FROM users WHERE LOWER(email) = $1",
+      "SELECT user_id FROM public.users WHERE LOWER(email) = $1",
       [normalizedEmail]
     );
 
@@ -617,7 +617,7 @@ app.post("/api/students/register", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const userResult = await client.query(
-      `INSERT INTO users (name, email, password_hash, role)
+      `INSERT INTO public.users (name, email, password_hash, role)
        VALUES ($1, $2, $3, 'student')
        RETURNING user_id, name, email, role`,
       [
@@ -630,7 +630,7 @@ app.post("/api/students/register", async (req, res) => {
     const newUser = userResult.rows[0];
 
     const studentResult = await client.query(
-      `INSERT INTO student_details
+      `INSERT INTO public.student_details
          (user_id, first_name, last_name, contact, course,
           enrollment_date, duration)
        VALUES ($1, $2, $3, $4, $5,
@@ -755,7 +755,7 @@ app.post("/api/student/attendance/mark", async (req, res) => {
     // Check public holidays
     const holidayResult = await db.query(
       `SELECT holiday_name, holiday_date, description
-       FROM public_holidays
+       FROM public.public_holidays
        WHERE holiday_date = $1::date
        LIMIT 1`,
       [today]
@@ -773,7 +773,7 @@ app.post("/api/student/attendance/mark", async (req, res) => {
 
     const student = await db.query(
       `SELECT user_id
-       FROM users
+       FROM public.users
        WHERE user_id = $1 AND role = 'student'`,
       [student_id]
     );
@@ -785,7 +785,7 @@ app.post("/api/student/attendance/mark", async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO attendance (student_id, attendance_date, status)
+      `INSERT INTO public.attendance (student_id, attendance_date, status)
        VALUES ($1, $2, 'present')
        ON CONFLICT (student_id, attendance_date) DO NOTHING
        RETURNING attendance_id, student_id, attendance_date,
@@ -850,7 +850,7 @@ async function closeAttendanceDay() {
 
     const holidayResult = await db.query(
       `SELECT holiday_name
-       FROM public_holidays
+       FROM public.public_holidays
        WHERE holiday_date = $1::date
        LIMIT 1`,
       [today]
@@ -864,7 +864,7 @@ async function closeAttendanceDay() {
     }
 
     const result = await db.query(
-      `INSERT INTO attendance (
+      `INSERT INTO public.attendance (
          student_id,
          attendance_date,
          status
@@ -873,11 +873,11 @@ async function closeAttendanceDay() {
          u.user_id,
          $1::date,
          'absent'
-       FROM users u
+       FROM public.users u
        WHERE u.role = 'student'
          AND NOT EXISTS (
            SELECT 1
-           FROM attendance a
+           FROM public.attendance a
            WHERE a.student_id = u.user_id
              AND a.attendance_date = $1::date
          )
@@ -929,7 +929,7 @@ app.get("/api/public-holiday/today", async (req, res) => {
 
     const result = await db.query(
       `SELECT holiday_name, holiday_date, description
-       FROM public_holidays
+       FROM public.public_holidays
        WHERE holiday_date = $1::date
        LIMIT 1`,
       [today]
@@ -984,7 +984,7 @@ app.get("/api/admin/profile/:userId", async (req, res) => {
          a.contact,
          a.designation,
          TO_CHAR(a.date_of_join, 'YYYY-MM-DD') AS date_of_join
-       FROM admin_details a
+       FROM public.admin_details a
        JOIN users u ON u.user_id = a.user_id
        WHERE a.user_id = $1`,
       [userId]
@@ -1059,7 +1059,7 @@ app.put("/api/admin/profile/:userId", async (req, res) => {
     }
 
     const result = await db.query(
-      `UPDATE admin_details
+      `UPDATE public.admin_details
        SET first_name = $1,
            last_name = $2,
            contact = $3,
@@ -1121,7 +1121,7 @@ app.get("/api/admin/employees", async (req, res) => {
         contact,
         designation,
         TO_CHAR(date_of_join, 'YYYY-MM-DD') AS date_of_join
-      FROM admin_details
+      FROM public.admin_details
       ORDER BY admin_id DESC
     `);
 
@@ -1197,7 +1197,7 @@ app.post("/api/admin/employees", async (req, res) => {
     if (contactNumber) {
       const duplicateResult = await db.query(
         `SELECT admin_id
-         FROM admin_details
+         FROM public.admin_details
          WHERE contact = $1
          LIMIT 1`,
         [contactNumber]
@@ -1213,7 +1213,7 @@ app.post("/api/admin/employees", async (req, res) => {
 
     // Insert only when the contact number is not already registered.
     const result = await db.query(
-      `INSERT INTO admin_details
+      `INSERT INTO public.admin_details
          (user_id, first_name, last_name, contact, designation, date_of_join)
        VALUES (NULL, $1, $2, $3, $4, COALESCE($5::date, CURRENT_DATE))
        RETURNING
@@ -1294,7 +1294,7 @@ app.get("/api/reports/student-attendance", async (req, res) => {
          a.attendance_date,
          a.check_in_time,
          a.status
-       FROM attendance a
+       FROM public.attendance a
        JOIN users u ON u.user_id = a.student_id
        WHERE u.role = 'student'
          AND a.attendance_date >= $1::date
