@@ -43,8 +43,8 @@ router.get("/admin", async (req, res) => {
         TO_CHAR(a.attendance_date, 'YYYY-MM-DD') AS attendance_date,
         a.check_in_time,
         a.status
-      FROM users u
-      LEFT JOIN attendance a
+      FROM public.users u
+      LEFT JOIN public.attendance a
         ON a.student_id = u.user_id
         AND a.attendance_date = $1::date
       WHERE LOWER(u.role) = 'student'
@@ -101,10 +101,10 @@ router.put("/admin/:studentId", async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO attendance
+      `INSERT INTO public.attendance
          (student_id, attendance_date, status, check_in_time)
        SELECT user_id, $2::date, $3, NULL
-       FROM users
+       FROM public.users
        WHERE user_id = $1
          AND LOWER(role) = 'student'
        ON CONFLICT (student_id, attendance_date)
