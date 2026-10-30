@@ -214,7 +214,7 @@ app.get("/api/students", async (req, res) => {
         s.last_name,
         s.course
       FROM public.users u
-      JOIN student_details s ON s.user_id = u.user_id
+      JOIN public.student_details s ON s.user_id = u.user_id
       WHERE u.role = 'student'
       ORDER BY s.first_name ASC
     `);
@@ -344,7 +344,7 @@ app.get("/api/student/profile/:userId", async (req, res) => {
          s.enrollment_date,
          s.duration
        FROM public.users u
-       LEFT JOIN student_details s ON s.user_id = u.user_id
+       LEFT JOIN public.student_details s ON s.user_id = u.user_id
        WHERE u.user_id = $1
          AND u.role = 'student'`,
       [userId]
@@ -985,7 +985,7 @@ app.get("/api/admin/profile/:userId", async (req, res) => {
          a.designation,
          TO_CHAR(a.date_of_join, 'YYYY-MM-DD') AS date_of_join
        FROM public.admin_details a
-       JOIN users u ON u.user_id = a.user_id
+       JOIN public.users u ON u.user_id = a.user_id
        WHERE a.user_id = $1`,
       [userId]
     );
@@ -1295,7 +1295,7 @@ app.get("/api/reports/student-attendance", async (req, res) => {
          a.check_in_time,
          a.status
        FROM public.attendance a
-       JOIN users u ON u.user_id = a.student_id
+       JOIN public.users u ON u.user_id = a.student_id
        WHERE u.role = 'student'
          AND a.attendance_date >= $1::date
          AND a.attendance_date < ($2::date + INTERVAL '1 day')
